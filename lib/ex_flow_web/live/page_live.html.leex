@@ -1,0 +1,38 @@
+
+<h1>All DAGs</h1>
+<h3>Count: (<%= Enum.count(@dags) %>)</h3>
+<hr/>
+<button phx-hook="AddDag" >Add Dag</button>
+<%= for dag <- Map.values(@dags) do %>
+  <section class="container">
+    <h1>DAG: <%= dag.dag_id %></h1>
+  </section>
+
+  <section class="row">
+    <table class="table table-striped">
+      <thead class="thead-light">
+        <tr>
+          <%= for col <- get_cols() do %>
+          <th scope="col"><%= col %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+      <%= for {_task_id, task} <- dag.tasks do %>
+        <tr class="<%=
+        case task.status do
+          :completed -> "green lighten-2"
+          :running -> "red lighten-2"
+          _ -> ""
+        end
+
+        %>">
+          <%= for val <- get_task_values(task, dag) do %>
+            <td><%= val %></td>
+          <% end %>
+        </tr>
+      <% end %>
+      </tbody>
+    </table>
+  </section>
+<% end %>
