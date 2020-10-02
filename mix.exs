@@ -44,7 +44,7 @@ defmodule ExFlow.MixProject do
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
-      {:ex_dag, path: "/Users/badu/elixirapps/apps/ex_flow/ex_dag"}
+      {:ex_dag, git: "https://github.com/badubizzle/ex_dag.git"}
     ]
   end
 
