@@ -24,43 +24,52 @@ defmodule ExFlow.DAGManager do
       end
   end
 
-  def on_completed(state, task, result) do
-    topic = "dags_listener"
-    Phoenix.PubSub.broadcast(ExFlow.PubSub, topic, {:update_task_status, state})
+  def run_task(task, payload) do
+    task_callback(task, payload)
   end
-
   def build_dag(dag_id) when is_binary(dag_id) do
-    callback = &task_callback/2
 
     start_date = DateTime.utc_now() |> DateTime.add(5, :second)
-    on_task_completed = &on_completed/3
-    on_dag_completed = fn d ->
-      on_completed(d, nil, nil)
-    end
     dag =
-      DAG.new(dag_id, on_task_completed, on_dag_completed)
-      |> DAG.add_task!(id: :a, callback: callback, data: {:op, :+})
-      |> DAG.add_task!(id: :b, callback: callback, data: {:value, 2}, parent: :a)
-      |> DAG.add_task!(id: :c, callback: callback, data: {:op, :+}, parent: :a)
-      |> DAG.add_task!(id: :d, callback: callback, data: {:op, :+}, parent: :c)
-      |> DAG.add_task!(id: :e, callback: callback, data: {:op, :+}, parent: :c)
-      |> DAG.add_task!(id: :f, callback: callback, data: {:value, 6}, parent: :d)
-      |> DAG.add_task!(id: :g, callback: callback, data: {:value, 5}, start_date: start_date, parent: :d)
-      |> DAG.add_task!(id: :h, callback: callback, data: {:value, 4}, parent: :e)
-      |> DAG.add_task!(id: :i, callback: callback, data: {:value, 3}, parent: :e)
-    dag
+      DAG.new(dag_id)
+      |> DAG.set_handler(ExFlow.DAGHandler)
+      |> DAG.set_default_task_handler(ExFlow.TaskHandler)
+      |> DAG.add_task!(id: :a, data: {:op, :+})
+      |> DAG.add_task!(id: :b, data: {:value, 2}, parent: :a)
+      |> DAG.add_task!(id: :c, data: {:op, :+}, parent: :a)
+      |> DAG.add_task!(id: :d, data: {:op, :+}, parent: :c)
+      |> DAG.add_task!(id: :e, data: {:op, :+}, parent: :c)
+      |> DAG.add_task!(id: :f, data: {:value, 6}, parent: :d)
+      |> DAG.add_task!(id: :g, data: {:value, 5}, start_date: start_date, parent: :d)
+      |> DAG.add_task!(id: :h, data: {:value, 4}, parent: :e)
+      |> DAG.add_task!(id: :i, data: {:value, 3}, parent: :e)
+
 
     r = ExDag.DAG.DAGSupervisor.run_dag(dag)
 
-    Phoenix.Tracker.track(ExDag.Tracker, self(), "dags", "#{dag.dag_id}", %{})
-    Phoenix.PubSub.subscribe(ExDag.PubSub, "dags")
+    ExFlow.Tracker.track_dag(dag)
+    ExFlow.Notifications.subscribe()
 
     IO.inspect(r)
-    dag
-
-    on_completed(dag, nil, nil)
+    ExDag.Store.save_dag(dag)
+    ExFlow.Notifications.emit_dag_status(dag)
     dag
 
   end
 
+  def run_dag(dag) do
+    ExDag.DAG.DAGSupervisor.run_dag(dag)
+    ExFlow.Tracker.track_dag(dag)
+    ExFlow.Notifications.subscribe()
+    ExFlow.Notifications.emit_dag_status(dag)
+  end
+
+  def delete_dag(dag) do
+    ExDag.Store.delete_dag(dag)
+    ExFlow.Notifications.emit_dag_status(dag)
+  end
+  def create_dags_dir() do
+
+
+  end
 end
