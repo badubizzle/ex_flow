@@ -2,22 +2,30 @@ defmodule ExFlowWeb.PageLive do
   use ExFlowWeb, :live_view
 
   alias ExDag.DAG
+  alias ExDag.DAGRun
   alias ExDag.DAG.DAGTask
   alias ExDag.DAG.DAGTaskRun
 
+  require Logger
+
   @impl true
   def mount(_params, _session, socket) do
+    ExFlow.Notifications.subscribe()
 
     dags =
       DAG.DAGSupervisor.running_dags()
-      |> Enum.map(fn %DAG{}=dag ->
-        {dag.dag_id, dag}
+      |> Enum.map(fn
+        %DAG{} = dag ->
+          {dag.dag_id, dag}
+
+        %DAGRun{dag: dag} ->
+          {dag.dag_id, dag}
       end)
       |> Map.new()
-    Phoenix.PubSub.subscribe(ExFlow.PubSub, "dags_listener")
-    {:ok, assign(socket, query: "", results: %{}, dags: dags)}
-  end
 
+    {:ok,
+     assign(socket, query: "", results: %{}, dags: dags, rows: build_dags(dags), cols: get_cols())}
+  end
 
   @impl true
   def handle_event("add_dag", %{"id" => dag_id}, socket) do
@@ -26,20 +34,44 @@ defmodule ExFlowWeb.PageLive do
   end
 
   @impl true
-  def handle_info({:update_task_status, _dag}, socket) do
+  def handle_info({:dag_status, %DAG{} = dag}, socket) do
+    Logger.info("Updating dag status 2: #{dag.dag_id} #{__MODULE__}")
+
     dags =
       DAG.DAGSupervisor.running_dags()
-      |> Enum.map(fn %DAG{}=dag ->
-        {dag.dag_id, dag}
+      |> Enum.map(fn
+        %DAG{} = dag ->
+          {dag.dag_id, dag}
+
+        %DAGRun{dag: dag} ->
+          {dag.dag_id, dag}
       end)
       |> Map.new()
-    {:noreply, assign(socket, dags: dags )}
+
+    {:noreply, assign(socket, dags: dags, rows: build_dags(dags), cols: get_cols())}
   end
 
-  def handle_info(info, socket) do
-    IO.inspect(info, label: "Info")
-    {:noreply, socket}
+  def handle_info({:dag_status, %DAGRun{} = dag}, socket) do
+    Logger.info("Updating dag status 2: #{dag.id} #{__MODULE__}")
+
+    dags =
+      DAG.DAGSupervisor.running_dags()
+      |> Enum.map(fn
+        %DAG{} = dag ->
+          {dag.dag_id, dag}
+
+        %DAGRun{dag: dag} ->
+          {dag.dag_id, dag}
+      end)
+      |> Map.new()
+
+    {:noreply, assign(socket, dags: dags, rows: build_dags(dags), cols: get_cols())}
   end
+
+  # def handle_info(info, socket) do
+  #   IO.inspect(info, label: "Info")
+  #   {:noreply, socket}
+  # end
 
   def get_cols() do
     [
@@ -57,49 +89,77 @@ defmodule ExFlowWeb.PageLive do
     ]
   end
 
+  @spec get_task_values(ExDag.DAG.DAGTask.t(), atom | %{task_deps: map}) :: [...]
   def get_task_values(%DAGTask{last_run: nil} = task, dag) do
     deps =
-            case Map.get(dag.task_deps, task.id, []) do
-              [] -> "-"
-              l -> Enum.join(l, ", ")
-            end
+      case Map.get(dag.task_deps, task.id, []) do
+        [] -> "-"
+        l -> Enum.join(l, ", ")
+      end
 
-          [task.id, :pending, deps, task.retries, task.start_date|> format_time(), "-", "-", "-", 0, "-", "-"]
-
+    [
+      {:id, task.id},
+      {:status, :pending},
+      {:deps, deps},
+      {:retries, task.retries},
+      {:start_date, task.start_date |> format_time()},
+      {:started_at, "-"},
+      {:ended_at, "-"},
+      {:lapse, "-"},
+      {:runs, 0},
+      {:result, "-"},
+      {:payload, "-"}
+    ]
   end
 
   def get_task_values(%DAGTask{last_run: %DAGTaskRun{} = last_run} = task, dag) do
     lapse =
-            if !is_nil(last_run.ended_at) and !is_nil(last_run.started_at) do
-              DateTime.diff(last_run.ended_at, last_run.started_at)
-            else
-              "-"
-            end
+      if !is_nil(last_run.ended_at) and !is_nil(last_run.started_at) do
+        DateTime.diff(last_run.ended_at, last_run.started_at)
+      else
+        "-"
+      end
 
-          deps =
-            case Map.get(dag.task_deps, task.id, []) do
-              [] -> "-"
-              l -> Enum.join(l, ", ")
-            end
+    deps =
+      case Map.get(dag.task_deps, task.id, []) do
+        [] -> "-"
+        l -> Enum.join(l, ", ")
+      end
 
-          [
-            task.id,
-            last_run.status,
-            deps,
-            task.retries,
-            task.start_date |> format_time(),
-            last_run.started_at |> format_time(),
-            last_run.ended_at |> format_time(),
-            "#{lapse}s",
-            DAG.get_runs(dag, task.id) |> Enum.count(),
-            last_run.result || last_run.error,
-            "#{inspect(last_run.payload)}"
-          ]
+    [
+      {:id, task.id},
+      {:status, last_run.status},
+      {:deps, deps},
+      {:retries, task.retries},
+      {:start_date, task.start_date |> format_time()},
+      {:started_at, last_run.started_at |> format_time()},
+      {:ended_at, last_run.ended_at |> format_time()},
+      {:lapse, "#{lapse}s"},
+      {:runs, DAG.get_runs(dag, task.id) |> Enum.count()},
+      {:result, last_run.result || last_run.error},
+      {:payload, "#{inspect(last_run.payload)}"}
+    ]
+  end
+
+  def build_dags(dags) do
+    IO.inspect(dags, label: "Another dag")
+
+    dags
+    |> Enum.map(fn {_, dag} ->
+      tasks =
+        Enum.map(dag.tasks, fn {_, task} ->
+          get_task_values(task, dag)
+        end)
+
+      %{tasks: tasks, id: dag.dag_id}
+    end)
+    |> IO.inspect()
   end
 
   def format_time(nil) do
     "-"
   end
+
   def format_time(d) do
     "#{d.hour}:#{d.minute}:#{d.second}"
   end

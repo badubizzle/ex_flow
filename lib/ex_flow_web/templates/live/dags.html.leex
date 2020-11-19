@@ -1,0 +1,40 @@
+<h1>All Dags</h1>
+
+<%= for dag <- @rows do %>
+
+  <section class="container">
+    <h1><%= dag.id %></h1>
+    <button dag-id="<%= dag.id %>" phx-hook="RunDag">Run</button>
+
+    <button dag-id="<%= dag.id %>" phx-hook="DeleteDag">Delete</button>
+  </section>
+
+  <%= for run <- dag.runs  do %>
+  <section class="row" style="">
+    <table class="table table-striped">
+      <thead class="thead-light">
+        <tr>
+          <%= for col <- @cols do %>
+          <th scope="col"><%= col %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr class="<%= cond do %>
+            <%= Keyword.get(run, :status) == :running -> %>
+              bg-success
+           <% true  -> %>
+
+          <% end %>" >
+          <%= for {_k, val} <- run do %>
+            <td><%= val %></td>
+          <% end %>
+        </tr>
+
+      </tbody>
+    </table>
+  </section>
+
+<% end %>
+<% end %>
