@@ -17,7 +17,11 @@ defmodule ExFlowWeb.Router do
   scope "/", ExFlowWeb do
     pipe_through :browser
 
+    live "/dags", DagLive, :index
+
     live "/", PageLive, :index
+
+
   end
 
   # Other scopes may use custom stacks.
