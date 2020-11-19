@@ -19,6 +19,8 @@ defmodule ExFlow.Application do
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
+
+    create_dirs()
     opts = [strategy: :one_for_one, name: ExFlow.Supervisor]
     Supervisor.start_link(children, opts)
   end
@@ -29,5 +31,11 @@ defmodule ExFlow.Application do
     IO.inspect("Config changed")
     ExFlowWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp create_dirs() do
+    priv_dir = :code.priv_dir(:ex_flow)
+    dags_dir = Path.join(priv_dir, "/dags")
+    File.mkdir(dags_dir)
   end
 end
