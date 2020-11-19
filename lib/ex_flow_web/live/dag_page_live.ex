@@ -1,8 +1,6 @@
 defmodule ExFlowWeb.DagLive do
   use ExFlowWeb, :live_view
 
-  use Phoenix.LiveView
-
   alias ExDag.DAG
   alias ExDag.DAGRun
   alias ExDag.DAG.DAGTask
@@ -34,23 +32,12 @@ defmodule ExFlowWeb.DagLive do
   end
 
   @impl true
-  def handle_info({:dag_status, %DAG{} = dag}, socket) do
-    Logger.info("Updating dag status: #{dag.dag_id} #{__MODULE__}")
+  def handle_info({:dag_status, _dag}, socket) do
     dags = ExDag.Store.get_dags()
     {:noreply, assign(socket, dags: dags, rows: build_rows(dags), cols: get_cols())}
   end
 
-  def handle_info({:dag_status, %DAGRun{} = dag}, socket) do
-    Logger.info("Updating dag status: #{dag.id} #{__MODULE__}")
-    dags = ExDag.Store.get_dags()
-    {:noreply, assign(socket, dags: dags, rows: build_rows(dags), cols: get_cols())}
-  end
-
-  # def handle_info(info, socket) do
-  #   IO.inspect(info, label: "Info")
-  #   {:noreply, socket}
-  # end
-
+  @impl true
   def render(assigns) do
     Phoenix.View.render(ExFlowWeb.LiveView, "dags.html", assigns)
   end
