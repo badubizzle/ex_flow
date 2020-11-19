@@ -18,7 +18,7 @@ defmodule ExFlowWeb.PageLive do
         %DAG{} = dag ->
           {dag.dag_id, dag}
 
-        %DAGRun{dag: dag} ->
+        %ExDag.DAGRun{dag: dag} ->
           {dag.dag_id, dag}
       end)
       |> Map.new()
@@ -43,7 +43,7 @@ defmodule ExFlowWeb.PageLive do
         %DAG{} = dag ->
           {dag.dag_id, dag}
 
-        %DAGRun{dag: dag} ->
+        %ExDag.DAGRun{dag: dag} ->
           {dag.dag_id, dag}
       end)
       |> Map.new()
