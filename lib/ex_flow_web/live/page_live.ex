@@ -1,4 +1,5 @@
 defmodule ExFlowWeb.PageLive do
+  @moduledoc false
   use ExFlowWeb, :live_view
 
   alias ExDag.DAG
@@ -67,11 +68,6 @@ defmodule ExFlowWeb.PageLive do
 
     {:noreply, assign(socket, dags: dags, rows: build_dags(dags), cols: get_cols())}
   end
-
-  # def handle_info(info, socket) do
-  #   IO.inspect(info, label: "Info")
-  #   {:noreply, socket}
-  # end
 
   def get_cols() do
     [
@@ -142,18 +138,21 @@ defmodule ExFlowWeb.PageLive do
   end
 
   def build_dags(dags) do
-    IO.inspect(dags, label: "Another dag")
+    Logger.info("Building dags: #{inspect(dags)}")
 
-    dags
-    |> Enum.map(fn {_, dag} ->
-      tasks =
-        Enum.map(dag.tasks, fn {_, task} ->
-          get_task_values(task, dag)
-        end)
+    result =
+      dags
+      |> Enum.map(fn {_, dag} ->
+        tasks =
+          Enum.map(dag.tasks, fn {_, task} ->
+            get_task_values(task, dag)
+          end)
 
-      %{tasks: tasks, id: dag.dag_id}
-    end)
-    |> IO.inspect()
+        %{tasks: tasks, id: dag.dag_id}
+      end)
+
+    Logger.info("Result: #{inspect(result)}")
+    result
   end
 
   def format_time(nil) do

@@ -36,6 +36,49 @@ Hooks.AddDag = {
         };
     }
 };
+
+Hooks.RunDag = {
+    mounted() {
+        const hook = this;
+        this.el.onclick = (event) => {
+            event.preventDefault();
+            const dagId = this.el.getAttribute('dag-id');
+            
+            hook.pushEvent("run_dag", {
+                id: dagId
+            });
+        };
+    }
+};
+
+Hooks.ResumeDag = {
+    mounted() {
+        const hook = this;
+        this.el.onclick = (event) => {
+            event.preventDefault();
+            const dagId = this.el.getAttribute('dag-id');
+            const runId = this.el.getAttribute('run-id');
+            hook.pushEvent("resume_dag", {
+                run_id: runId,
+                dag_id: dagId
+            });
+        };
+    }
+};
+Hooks.StopDag = {
+    mounted() {
+        const hook = this;
+        this.el.onclick = (event) => {
+            event.preventDefault();
+            const dagId = this.el.getAttribute('dag-id');
+            const runId = this.el.getAttribute('run-id');
+            hook.pushEvent("stop_dag", {
+                run_id: runId,
+                dag_id: dagId
+            });
+        };
+    }
+};
 Hooks.PhoneNumber = {
     mounted() {
         this.el.addEventListener("input", e => {

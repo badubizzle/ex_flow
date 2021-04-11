@@ -1,4 +1,5 @@
 defmodule ExFlowWeb.DagLive do
+  @moduledoc false
   use ExFlowWeb, :live_view
 
   alias ExDag.DAG
@@ -10,7 +11,7 @@ defmodule ExFlowWeb.DagLive do
   @impl true
   def mount(_params, _session, socket) do
     dags = ExDag.Store.get_dags()
-    IO.inspect(dags, label: "DAGS")
+    Logger.debug("DAGS: #{inspect(dags)}")
     ExFlow.Notifications.subscribe()
     cols = get_cols()
     {:ok, assign(socket, query: "", dags: dags, rows: build_rows(dags), cols: cols)}
@@ -21,6 +22,24 @@ defmodule ExFlowWeb.DagLive do
     dags = socket.assigns.dags
     dag = Map.get(dags, dag_id)
     ExFlow.DAGManager.run_dag(dag)
+    {:noreply, socket}
+  end
+
+  def handle_event("resume_dag", %{"run_id" => run_id, "dag_id" => dag_id}, socket) do
+    dags = socket.assigns.dags
+    dag = Map.get(dags, dag_id)
+    runs = ExDag.Store.get_dag_runs(dag)
+    run = Map.get(runs, run_id)
+    ExFlow.DAGManager.resume_dag(run)
+    {:noreply, socket}
+  end
+
+  def handle_event("stop_dag", %{"run_id" => run_id, "dag_id" => dag_id}, socket) do
+    dags = socket.assigns.dags
+    dag = Map.get(dags, dag_id)
+    runs = ExDag.Store.get_dag_runs(dag)
+    run = Map.get(runs, run_id)
+    ExFlow.DAGManager.stop_dag(run)
     {:noreply, socket}
   end
 
@@ -53,8 +72,8 @@ defmodule ExFlowWeb.DagLive do
       "Total Tasks",
       "Running Tasks",
       "Pending Tasks",
-      "Completed Tasks"
-      # "Start Date",
+      "Completed Tasks",
+      "Start Date"
       # "Started At",
       # "Ended At",
       # "Took",
@@ -85,7 +104,7 @@ defmodule ExFlowWeb.DagLive do
     [
       {:id, dag.dag_id},
       {:status, dag.status},
-      {:tasks,  Enum.count(dag.tasks)},
+      {:tasks, Enum.count(dag.tasks)},
       {:running, running},
       {:pending, pending},
       {:completed, completed}
@@ -144,17 +163,30 @@ defmodule ExFlowWeb.DagLive do
   end
 
   def build_rows(dags) do
-    Enum.map(dags, fn {_dag_id, dag} ->
-      runs =
-        dag
-        |> ExDag.Store.get_dag_runs()
-        |> Enum.map(fn {_, %DAGRun{dag: dag}} ->
-          get_dag_row_values(dag)
-        end)
+    rows =
+      Enum.map(dags, fn {_dag_id, dag} ->
+        runs =
+          dag
+          |> ExDag.Store.get_dag_runs()
+          |> Enum.map(fn {_, %DAGRun{id: run_id, dag: dag, started_at: started_at}} ->
+            column_values =
+              get_dag_row_values(dag)
+              |> Keyword.put(:start_date, started_at)
 
-      %{runs: runs, id: dag.dag_id}
-    end)
-    |> IO.inspect(label: "Rows")
+            [
+              {:cols, column_values},
+              {:run_id, run_id},
+              {:status, dag.status},
+              {:completed, ExDag.Store.completed?(dag)},
+              {:running, ExDag.Store.is_running(run_id)}
+            ]
+          end)
+
+        %{runs: runs, id: dag.dag_id}
+      end)
+
+    Logger.info("Rows: #{inspect(rows)}")
+    rows
   end
 
   def format_time(nil) do

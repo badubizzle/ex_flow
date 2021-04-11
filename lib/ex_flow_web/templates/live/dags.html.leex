@@ -22,12 +22,29 @@
       <tbody>
 
         <tr class="<%= cond do %>
-            <%= Keyword.get(run, :status) == :running -> %>
+            <%= Keyword.get(run, :running) == :true -> %>
               bg-success
            <% true  -> %>
 
           <% end %>" >
-          <%= for {_k, val} <- run do %>
+
+          <%= cond do %>
+           <% Keyword.get(run, :completed) == :false  and  Keyword.get(run, :running) == :false -> %>
+            <td>
+            <button
+            run-id="<%= Keyword.get(run, :run_id) %>"
+            dag-id="<%= dag.id %>" phx-hook="ResumeDag" style="color: black;"> &#9654; </button>
+            </td>
+            <% Keyword.get(run, :running) == :true -> %>
+              <td>
+            <button
+            run-id="<%= Keyword.get(run, :run_id) %>"
+            dag-id="<%= dag.id %>" phx-hook="StopDag" style="color: black;">&#9612;&#9612;</button>
+            </td>
+            <% true  -> %>
+          <% end %>
+
+          <%= for {_k, val} <- run[:cols] do %>
             <td><%= val %></td>
           <% end %>
         </tr>

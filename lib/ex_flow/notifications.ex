@@ -1,5 +1,7 @@
 defmodule ExFlow.Notifications do
-
+  @moduledoc """
+  Notification manager for dags
+  """
   @dag_listeners "dag_listeners"
   @dags_topic "dags"
 
@@ -22,5 +24,4 @@ defmodule ExFlow.Notifications do
     :ok = Phoenix.PubSub.subscribe(ExFlow.PubSub, @dags_topic)
     :ok = Phoenix.PubSub.subscribe(ExFlow.PubSub, @dag_listeners)
   end
-
 end

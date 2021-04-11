@@ -1,1 +1,1 @@
-run:; mix deps.get && mix deps.update ex_dag && ./run.sh
+run:; mix deps.get && mix deps.update ex_dag && cd assets && npm install && cd ../ && ./run.sh

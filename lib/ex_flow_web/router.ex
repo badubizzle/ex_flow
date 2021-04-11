@@ -20,8 +20,6 @@ defmodule ExFlowWeb.Router do
     live "/dags", DagLive, :index
 
     live "/", PageLive, :index
-
-
   end
 
   # Other scopes may use custom stacks.

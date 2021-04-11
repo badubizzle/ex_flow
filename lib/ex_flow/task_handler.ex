@@ -1,9 +1,8 @@
 defmodule ExFlow.TaskHandler do
-@moduledoc """
-Handler for dag task
-"""
-@behaviour ExDag.DAG.Handlers.TaskHandler
-
+  @moduledoc """
+  Handler for dag task
+  """
+  @behaviour ExDag.DAG.Handlers.TaskHandler
 
   @impl true
   def run_task(task, payload) do
@@ -29,5 +28,4 @@ Handler for dag task
   @impl true
   def on_success(_arg0, _arg1) do
   end
-
 end

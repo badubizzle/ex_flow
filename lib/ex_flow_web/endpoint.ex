@@ -50,5 +50,4 @@ defmodule ExFlowWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug ExFlowWeb.Router
-
 end

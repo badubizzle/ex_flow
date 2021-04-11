@@ -1,5 +1,5 @@
 defmodule ExFlow.Utils do
-
+  @moduledoc false
   def get_dags_dir() do
     Path.join(:code.priv_dir(:ex_flow), "/dags")
   end

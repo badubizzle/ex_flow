@@ -4,6 +4,7 @@ defmodule ExFlow.Application do
   @moduledoc false
 
   use Application
+  require Logger
 
   def start(_type, _args) do
     children = [
@@ -20,6 +21,7 @@ defmodule ExFlow.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
 
+    ExDag.Store.init()
     create_dirs()
     opts = [strategy: :one_for_one, name: ExFlow.Supervisor]
     Supervisor.start_link(children, opts)
@@ -28,7 +30,7 @@ defmodule ExFlow.Application do
   # Tell Phoenix to update the endpoint configuration
   # whenever the application is updated.
   def config_change(changed, _new, removed) do
-    IO.inspect("Config changed")
+    Logger.info("Config changed")
     ExFlowWeb.Endpoint.config_change(changed, removed)
     :ok
   end

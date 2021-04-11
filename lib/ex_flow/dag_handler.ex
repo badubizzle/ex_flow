@@ -1,9 +1,11 @@
 defmodule ExFlow.DAGHandler do
+  @moduledoc """
+  Sample implementation of daghandler behaviour
+  """
   @behaviour ExDag.DAG.Handlers.DAGHandler
 
   @impl true
-  def on_dag_completed(%ExDag.DAGRun{}=dag_run) do
-
+  def on_dag_completed(%ExDag.DAGRun{} = dag_run) do
     ExDag.DAG.Utils.print_status(dag_run.dag)
     ExDag.DAG.Utils.print_task_runs(dag_run.dag.task_runs)
     ExDag.Store.save_dag_run(dag_run)
@@ -11,7 +13,7 @@ defmodule ExFlow.DAGHandler do
   end
 
   @impl true
-  def on_task_completed(%ExDag.DAGRun{}=dag_run, _task, _result) do
+  def on_task_completed(%ExDag.DAGRun{} = dag_run, _task, _result) do
     ExDag.DAG.Utils.print_status(dag_run.dag)
     ExDag.DAG.Utils.print_task_runs(dag_run.dag.task_runs)
     ExDag.Store.save_dag_run(dag_run)
