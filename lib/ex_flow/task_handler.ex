@@ -13,10 +13,10 @@ defmodule ExFlow.TaskHandler do
       Process.exit(self(), :kill)
     else
       case task.data do
-        {:value, v} ->
+        %{value: v} ->
           {:ok, v}
 
-        {:op, :+} ->
+        %{op: :+} ->
           {:ok, Enum.reduce(payload, 0, fn {_k, v}, acc -> acc + v end)}
 
         _ ->
