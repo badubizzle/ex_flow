@@ -89,3 +89,21 @@
   display: block;
   margin: -1rem 0 2rem;
 }
+.task-run{
+  width: 20px;
+  height: 20px;
+  display: inline-block!important;  
+  text-align: center;
+  background: black;
+  margin-left: -3px;
+  border: none;
+  color: white;
+  vertical-align: middle;
+}
+
+.task-running{
+  background: orange;
+}
+.task-completed{
+  background: green;
+}
