@@ -1,15 +1,15 @@
-<h1>All Dags</h1>
 
+<h1>All Dags</h1>
+<div  id="live-dags">
 <%= for dag <- @rows do %>
 
   <section class="container">
     <h1><%= dag.id %></h1>
-    <button dag-id="<%= dag.id %>" phx-hook="RunDag">Run</button>
+    <button id="run-dag-<%= dag.id %>" dag-id="<%= dag.id %>" phx-hook="RunDag">Run</button>
 
-    <button dag-id="<%= dag.id %>" phx-hook="DeleteDag">Delete</button>
+    <button id="delete-dag-<%= dag.id %>" dag-id="<%= dag.id %>" phx-hook="DeleteDag">Delete</button>
   </section>
 
-  <%= for run <- dag.runs  do %>
   <section class="row" style="">
     <table class="table table-striped">
       <thead class="thead-light">
@@ -17,41 +17,16 @@
           <%= for col <- @cols do %>
           <th scope="col"><%= col %></th>
           <% end %>
+          <th scope="col">Actions</th>
         </tr>
       </thead>
       <tbody>
-
-        <tr class="<%= cond do %>
-            <%= Keyword.get(run, :running) == :true -> %>
-              bg-success
-           <% true  -> %>
-
-          <% end %>" >
-
-          <%= cond do %>
-           <% Keyword.get(run, :completed) == :false  and  Keyword.get(run, :running) == :false -> %>
-            <td>
-            <button
-            run-id="<%= Keyword.get(run, :run_id) %>"
-            dag-id="<%= dag.id %>" phx-hook="ResumeDag" style="color: black;"> &#9654; </button>
-            </td>
-            <% Keyword.get(run, :running) == :true -> %>
-              <td>
-            <button
-            run-id="<%= Keyword.get(run, :run_id) %>"
-            dag-id="<%= dag.id %>" phx-hook="StopDag" style="color: black;">&#9612;&#9612;</button>
-            </td>
-            <% true  -> %>
-          <% end %>
-
-          <%= for {_k, val} <- run[:cols] do %>
-            <td><%= val %></td>
-          <% end %>
-        </tr>
-
+        <%= for run <- dag.runs  do %>
+       <%= live_component @socket, DAGRunComponent, run: run, dag: dag %>
+        <% end %>
       </tbody>
     </table>
   </section>
+</div>
 
-<% end %>
 <% end %>

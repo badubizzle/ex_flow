@@ -1,3 +1,75 @@
+defmodule TaskRunComponent do
+  @moduledoc false
+  use Phoenix.LiveComponent
+
+  def render(assigns) do
+    t = assigns[:task]
+
+    ~L"""
+    <%= cond do %>
+    <% t.status == :completed  -> %>
+      <span class="task-run task-completed"><%= t.id %></span>
+    <% t.status == :running  -> %>
+      <span class="task-run task-running"><%= t.id %></span>
+    <% true -> %>
+    <span class="task-run"><%= t.id %></span>
+    <% end %>
+    """
+  end
+end
+
+defmodule DAGRunComponent do
+  @moduledoc false
+  use Phoenix.LiveComponent
+  alias ExFlowWeb.Router.Helpers, as: Routes
+
+  def render(assigns) do
+    run = assigns[:run]
+    dag = assigns[:dag]
+
+    ~L"""
+    <tr class="">
+      <%= for {_k, val} <- run[:cols] do %>
+        <td><%= val %></td>
+      <% end %>
+
+      <td>
+        <div style="display: inline;">
+        <%= for {_k, t} <- run[:tasks] do %>
+        <%= live_component @socket, TaskRunComponent, task: t %>
+        <% end %>
+        </div>
+      </td>
+
+    <%= cond do %>
+    <% Map.get(run, :completed) == :false  and  Map.get(run, :running) == :false -> %>
+    <td>
+    <button
+    id="resume-run-<%= Map.get(run, :run_id) %>"
+    run-id="<%= Map.get(run, :run_id) %>"
+    dag-id="<%= dag.id %>" phx-hook="ResumeDag" style="color: black;"> &#9654; </button>
+    </td>
+    <% Map.get(run, :running) == :true -> %>
+      <td>
+    <button
+    id="stop-run-<%= Map.get(run, :run_id) %>"
+    run-id="<%= run[:run_id] %>"
+    dag-id="<%= dag.id %>" phx-hook="StopDag" style="color: black;">&#9612;&#9612;</button>
+    </td>
+    <% true  -> %>
+    <% end %>
+    <td>
+    <%= live_patch to: Routes.live_path(@socket, ExFlowWeb.DagRunLive, dag.id, run[:run_id]) do %>
+      <div class="column">
+        Details
+      </div>
+    <% end %>
+    </td>
+    </tr>
+    """
+  end
+end
+
 defmodule ExFlowWeb.DagLive do
   @moduledoc false
   use ExFlowWeb, :live_view
@@ -6,14 +78,14 @@ defmodule ExFlowWeb.DagLive do
   alias ExDag.DAGRun
   alias ExDag.DAG.DAGTask
   alias ExDag.DAG.DAGTaskRun
-  require Logger
 
   @impl true
   def mount(_params, _session, socket) do
     dags = ExDag.Store.get_dags()
-    Logger.debug("DAGS: #{inspect(dags)}")
+    # Logger.debug("DAGS: #{inspect(dags)}")
     ExFlow.Notifications.subscribe()
     cols = get_cols()
+    Process.send_after(self(), {:dag_status, nil}, 5_000)
     {:ok, assign(socket, query: "", dags: dags, rows: build_rows(dags), cols: cols)}
   end
 
@@ -22,7 +94,10 @@ defmodule ExFlowWeb.DagLive do
     dags = socket.assigns.dags
     dag = Map.get(dags, dag_id)
     ExFlow.DAGManager.run_dag(dag)
-    {:noreply, socket}
+    dags = ExDag.Store.get_dags()
+    rows = build_rows(dags)
+    cols = get_cols()
+    {:noreply, assign(socket, dags: dags, rows: rows, cols: cols)}
   end
 
   def handle_event("resume_dag", %{"run_id" => run_id, "dag_id" => dag_id}, socket) do
@@ -31,7 +106,10 @@ defmodule ExFlowWeb.DagLive do
     runs = ExDag.Store.get_dag_runs(dag)
     run = Map.get(runs, run_id)
     ExFlow.DAGManager.resume_dag(run)
-    {:noreply, socket}
+    dags = ExDag.Store.get_dags()
+    rows = build_rows(dags)
+    cols = get_cols()
+    {:noreply, assign(socket, rows: rows, cols: cols, dags: dags)}
   end
 
   def handle_event("stop_dag", %{"run_id" => run_id, "dag_id" => dag_id}, socket) do
@@ -40,20 +118,32 @@ defmodule ExFlowWeb.DagLive do
     runs = ExDag.Store.get_dag_runs(dag)
     run = Map.get(runs, run_id)
     ExFlow.DAGManager.stop_dag(run)
-    {:noreply, socket}
+    dags = ExDag.Store.get_dags()
+    rows = build_rows(dags)
+    cols = get_cols()
+    {:noreply, assign(socket, rows: rows, cols: cols, dags: dags)}
   end
 
   def handle_event("delete_dag", %{"id" => dag_id}, socket) do
     dags = socket.assigns.dags
     dag = Map.get(dags, dag_id)
     ExFlow.DAGManager.delete_dag(dag)
-    {:noreply, socket}
+    dags = ExDag.Store.get_dags()
+    rows = build_rows(dags)
+    cols = get_cols()
+    {:noreply, assign(socket, rows: rows, cols: cols, dags: dags)}
   end
 
   @impl true
   def handle_info({:dag_status, _dag}, socket) do
+    # Logger.info("Updating status")
     dags = ExDag.Store.get_dags()
-    {:noreply, assign(socket, dags: dags, rows: build_rows(dags), cols: get_cols())}
+    rows = build_rows(dags)
+    cols = get_cols()
+    push_event(socket, "update_dags", %{dags: [], rows: rows, cols: cols})
+    # %{rows: rows, cols: cols})}
+    {:noreply, assign(socket, dags: dags, rows: rows, cols: cols)}
+    # {:noreply, push_event(socket, "update_dags", %{dags: dags, rows: rows, cols: cols})}
   end
 
   @impl true
@@ -68,12 +158,13 @@ defmodule ExFlowWeb.DagLive do
   def get_cols() do
     [
       "DAD ID",
-      "Status",
-      "Total Tasks",
-      "Running Tasks",
-      "Pending Tasks",
-      "Completed Tasks",
-      "Start Date"
+      "RUN ID",
+      "Status"
+      # "Total Tasks",
+      # "Running Tasks",
+      # "Pending Tasks",
+      # "Completed Tasks",
+      # "Start Date"
       # "Started At",
       # "Ended At",
       # "Took",
@@ -169,23 +260,24 @@ defmodule ExFlowWeb.DagLive do
           dag
           |> ExDag.Store.get_dag_runs()
           |> Enum.map(fn {_, %DAGRun{id: run_id, dag: dag, started_at: started_at}} ->
-            column_values =
+            _column_values =
               get_dag_row_values(dag)
               |> Keyword.put(:start_date, started_at)
 
-            [
-              {:cols, column_values},
-              {:run_id, run_id},
-              {:status, dag.status},
-              {:completed, ExDag.Store.completed?(dag)},
-              {:running, ExDag.Store.is_running(run_id)}
-            ]
+            %{
+              cols: %{dag_id: dag.dag_id, run_id: run_id},
+              run_id: run_id,
+              status: dag.status,
+              completed: ExDag.Store.completed?(dag),
+              running: ExDag.Store.is_running(run_id),
+              tasks: DAG.sorted_tasks(dag)
+            }
           end)
 
         %{runs: runs, id: dag.dag_id}
       end)
 
-    Logger.info("Rows: #{inspect(rows)}")
+    # Logger.info("Rows: #{inspect(rows)}")
     rows
   end
 

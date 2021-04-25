@@ -2,7 +2,7 @@
 <h1>All DAGs</h1>
 <h3>Count: (<%= Enum.count(@rows) %>)</h3>
 <hr/>
-<button phx-hook="AddDag" >Add Dag</button>
+<button id="add-dag-button" phx-hook="AddDag" >Add Dag</button>
 <%= for dag <- @rows do %>
   <section class="container">
     <h1>DAG: <%= dag.id %></h1>
@@ -21,13 +21,13 @@
       <%= for task <- dag.tasks do %>
         <tr class="<%= cond do %>
 
-            <%= Keyword.get(task, :status) == :running -> %>
+            <% Keyword.get(task, :status) == :running -> %>
               table-info
-            <%= Keyword.get(task, :status) == :failed -> %>
+            <% Keyword.get(task, :status) == :failed -> %>
               table-danger
-            <%= Keyword.get(task, :status) == :completed -> %>
+            <% Keyword.get(task, :status) == :completed -> %>
               table-success
-            <%= Keyword.get(task, :status) == :pending -> %>
+            <% Keyword.get(task, :status) == :pending -> %>
               table-secondary
            <% true  -> %>
 
