@@ -1,0 +1,78 @@
+<div class="container">
+
+<table class="table">
+    <thead class="thead-light">
+    </thead>
+    <tbody>
+        <tr>
+            <td >task id:</td>
+            <td><code><%= @task_id %></code></td>
+        </tr>
+        <tr>
+            <td >depends on: </td>
+            <td><code><%= Jason.encode!(@deps) %></code></td>
+        </tr>
+        <%= for {k, v} <- @task, not k in [:last_run, :id, :status] do %>
+        <tr>
+            <td><%= k %>: </td>
+            <td><code><%= Jason.encode!(v) %></code></td>
+        </tr>
+        <% end %>
+        <tr>
+            <td>status</td>
+            <td>
+            <%= cond do %>
+            <% @task.status == :completed -> %>
+                <span class="badge badge-success"><%= @task.status %></span>
+            <% @task.status == :failed  -> %>
+                <span class="badge badge-danger"><%= @task.status %></span>
+            <% @task.status == :running  -> %>
+                <span class="badge badge-warning"><%= @task.status %></span>
+            <% true -> %>
+                <span class="badge "><%= @task.status %></span>
+            <% end %>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<h3>Runs</h3>
+<section class="row" style="">
+    <table class="table table-striped">
+      <thead class="thead-light">
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Started</th>
+          <th scope="col">Ended</th>
+          <th scope="col">Took</th>
+          <th scope="col">Payload</th>
+          <th scope="col">Status</th>
+          <th scope="col">Result</th>
+        </tr>
+      </thead>
+      <tbody>
+      <%= if !is_nil(@runs) do %>
+        <%= for {run, index} <- Enum.with_index(Enum.reverse(@runs))  do %>
+        <tr>
+            <th scope="row"><%= index+1 %></th>
+            <td title="<%= run.started_at %>"><%= Timex.Format.DateTime.Formatters.Relative.format!(run.started_at, "{relative}") %></td>
+            <td title="<%= run.ended_at %>"><%= Timex.Format.DateTime.Formatters.Relative.format!(run.ended_at, "{relative}") %></td>
+            <td title="<%= run.ended_at %>"><%= Timex.diff(run.ended_at, run.started_at, :seconds) %>sec</td>
+            <td><code><%= Jason.encode!(run.payload) %></code></td>
+            <td>
+            <%= cond do %>
+            <% run.status == :completed  -> %>
+                <span class="badge badge-success"><%= run.status %></span>
+            <% run.status == :failed  -> %>
+                <span class="badge badge-danger"><%= run.status %></span>
+            <% true -> %>
+                <span class="badge "><%= run.status %></span>
+            <% end %>
+            </td>
+            <td><%= Jason.encode!(run.result) %></td>
+        </tr>
+        <% end %>
+      <% end %>
+      </tbody>
+    </table>
+  </section>
+</div>

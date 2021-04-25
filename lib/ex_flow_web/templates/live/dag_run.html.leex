@@ -1,0 +1,61 @@
+<div phx-update="ignore" class="modal fade modal-dialog modal-lg" id="task-details" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true"
+style="diplay: block;">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" >Task detail</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="task-content-name">
+
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<h1>DAG Run</hi>
+<h3></h3>
+
+<table class="table">
+    <thead class="thead-light">
+    </thead>
+    <tbody>
+        <tr>
+            <th scope="row">DAG ID:</th>
+            <td><code><%= @dag_run.dag.dag_id %></code></td>
+        </tr>
+        <tr>
+            <th scope="row">RUN ID: </th>
+            <td><code><%= @dag_run.id %></code></td>
+        </tr>
+        <%= for {k, v} <- Map.from_struct(@dag_run), k not in [:dag, :id] do %>
+        <tr>
+            <td><%= k %>: </td>
+            <td><code><%= Jason.encode!(v) %></code></td>
+        </tr>
+        <% end %>
+        <tr>
+        <td>status</td>
+        <td>
+          <span class="badge badge-success"><%= @dag_run.dag.status %></span>
+        </td>
+        </tr>
+    </tbody>
+</table>
+
+<hr/>
+
+
+<div dag-id="<%= @dag_run.dag.dag_id %>" run-id="<%= @dag_run.id %>" run-task-deps="<%= Jason.encode!(@task_deps) %>" run-tasks="<%= Jason.encode!(@tasks) %>" run-data="<%= Jason.encode!(Map.from_struct(@dag_run)) %>"  id="live-dag-run" phx-hook="DAGRunChart">
+</div>
+<section>
+    <div id="d3-run-chart-container">
+    </div>
+</section>
+<!--<div class="modal-backdrop show"></div>-->
