@@ -93,7 +93,12 @@ Hooks.StopDag = {
 
 Hooks.DeleteDag = {
     mounted() {
-
+        const dag_id = this.el.getAttribute('dag-id');
+        this.el.onclick = (event)=>{
+            this.pushEvent("delete-dag", {
+                dag_id: dag_id
+            })
+        }
     }
 }
 
@@ -300,10 +305,10 @@ Hooks.DAGRunChart = {
             console.log(data)
         });
         this.dag_id = this.el.getAttribute('dag-id')
-        this.run_id = this.el.getAttribute('run-id')
-        this.renderd3();
+        this.run_id = this.el.getAttribute('run-id')        
+        this.renderD3();
     },
-    updated() {
+    updated() {        
         this.renderD3();
     }
 }
