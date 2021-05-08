@@ -21,7 +21,7 @@ defmodule ExFlow.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
 
-    ExDag.Store.init()
+    ExDag.Store.init_store()
     create_dirs()
     opts = [strategy: :one_for_one, name: ExFlow.Supervisor]
     Supervisor.start_link(children, opts)

@@ -64,6 +64,12 @@ defmodule DAGRunComponent do
         Details
       </div>
     <% end %>
+
+    <%= if Map.get(run, :completed) == true  and  Map.get(run, :running) == false  do %>
+    <div class="column">
+      <a href="#" id="delete-dag-run-<%= run[:run_id] %>" dag-id="<%= dag.id %>" run-id="<%= run[:run_id] %>" phx-hook="DeleteDagRun">Delete</a>
+    <% end %>
+    </div>
     </td>
     </tr>
     """
@@ -79,10 +85,11 @@ defmodule ExFlowWeb.DagLive do
   alias ExDag.DAG.DAGTask
   alias ExDag.DAG.DAGTaskRun
 
+  require Logger
+
   @impl true
   def mount(_params, _session, socket) do
     dags = ExDag.Store.get_dags()
-    # Logger.debug("DAGS: #{inspect(dags)}")
     ExFlow.Notifications.subscribe()
     cols = get_cols()
     Process.send_after(self(), {:dag_status, nil}, 5_000)
@@ -124,7 +131,7 @@ defmodule ExFlowWeb.DagLive do
     {:noreply, assign(socket, rows: rows, cols: cols, dags: dags)}
   end
 
-  def handle_event("delete_dag", %{"id" => dag_id}, socket) do
+  def handle_event("delete-dag", %{"dag_id" => dag_id}, socket) do
     dags = socket.assigns.dags
     dag = Map.get(dags, dag_id)
     ExFlow.DAGManager.delete_dag(dag)
@@ -136,14 +143,12 @@ defmodule ExFlowWeb.DagLive do
 
   @impl true
   def handle_info({:dag_status, _dag}, socket) do
-    # Logger.info("Updating status")
+    Logger.info("Updating status")
     dags = ExDag.Store.get_dags()
     rows = build_rows(dags)
     cols = get_cols()
     push_event(socket, "update_dags", %{dags: [], rows: rows, cols: cols})
-    # %{rows: rows, cols: cols})}
     {:noreply, assign(socket, dags: dags, rows: rows, cols: cols)}
-    # {:noreply, push_event(socket, "update_dags", %{dags: dags, rows: rows, cols: cols})}
   end
 
   @impl true
