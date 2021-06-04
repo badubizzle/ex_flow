@@ -48,8 +48,7 @@ defmodule ExFlow.MixProject do
       {:timex, "~> 3.7"},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-      # {:ex_dag, git: "https://github.com/badubizzle/ex_dag.git". :develop}
-      {:ex_dag, path: "/Users/andela/github/ex_dag"}
+      {:ex_dag, git: "https://github.com/badubizzle/ex_dag.git"}
     ]
   end
 
