@@ -1,3 +1,6 @@
+<%= if is_nil(@dag_run)  do %>
+  <h3>DAG run not found</h3>
+<% else %>
 <div phx-update="ignore" class="modal fade modal-dialog modal-lg" id="task-details" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true"
 style="diplay: block;">
   <div class="modal-dialog modal-lg" role="document">
@@ -28,7 +31,14 @@ style="diplay: block;">
     <tbody>
         <tr>
             <th scope="row">DAG ID:</th>
-            <td><code><%= @dag_run.dag.dag_id %></code></td>
+            <td>
+
+            <%= link to: "/dags/#{@dag_run.dag.dag_id}"  do %>
+              <code><%= @dag_run.dag.dag_id %></code>
+            <% end %>
+
+
+            </td>
         </tr>
         <tr>
             <th scope="row">RUN ID: </th>
@@ -57,6 +67,5 @@ style="diplay: block;">
 <section>
     <div id="d3-run-chart-container">
     </div>
-    <div id="run-chart-container"></div>
 </section>
-<!--<div class="modal-backdrop show"></div>-->
+<% end %>

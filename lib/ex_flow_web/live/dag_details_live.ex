@@ -1,35 +1,39 @@
-defmodule ExFlowWeb.DagRunLive do
+defmodule ExFlowWeb.DagDetailsLive do
   @moduledoc false
   use ExFlowWeb, :live_view
+  alias ExFlow.LiveUtils
 
   require Logger
-
+  @cols [
+    "DAD ID",
+    "RUN ID",
+    "Status"
+  ]
   @impl true
-  def mount(%{"dag_id" => dag_id, "run_id" => run_id} = params, _session, socket) do
-    dag_run = case ExDag.Store.get_dag_run(dag_id, run_id) do
-      {:ok, dag_run} ->
+  def mount(%{"dag_id" => dag_id} = _params, _session, socket) do
+    {dags, rows} = case ExDag.Store.get_dag(dag_id) do
+      {:ok, dag} ->
         ExFlow.Notifications.subscribe()
-        dag_run
+        rows =  LiveUtils.build_rows([{dag.dag_id, dag}])
+        {[dag], rows}
       _ ->
-        nil
+        {[], []}
     end
-
-    {:ok, assign(socket, dag_run: dag_run)}
+    {:ok, assign(socket, dag: hd(dags), dags: dags, rows: rows, cols: @cols)}
   end
 
   @impl true
-  def handle_params(%{"dag_id" => dag_id, "run_id" => run_id} = _params, _uri, socket) do
-    {dag_run, tasks, deps} = case ExDag.Store.get_dag_run(dag_id, run_id) do
-      {:ok, %ExDag.DAGRun{} = dag_run}  ->
-        tasks = ExDag.DAG.sorted_tasks(dag_run.dag)
-        deps = ExDag.DAG.get_deps_map(dag_run.dag)
-        {dag_run, tasks, deps}
+  def handle_params(%{"dag_id" => dag_id} = _params, _uri, socket) do
+    {dags, _tasks, _deps, rows} = case ExDag.Store.get_dag(dag_id) do
+      {:ok, %ExDag.DAG{} = dag} ->
+        tasks = ExDag.DAG.sorted_tasks(dag)
+        deps = ExDag.DAG.get_deps_map(dag)
+        rows = LiveUtils.build_rows([{dag.dag_id, dag}])
+        {[dag], tasks, deps, rows}
       _ ->
-        {nil, [], []}
+        {[], [], [], []}
     end
-
-    {:noreply,
-     assign(socket, run_id: run_id, dag_run: dag_run, tasks: tasks, task_deps: deps)}
+    {:noreply, assign(socket, dag: hd(dags), dag_id: dag_id, dags: dags, rows: rows, cols: @cols)}
   end
 
   @impl true
@@ -71,6 +75,8 @@ defmodule ExFlowWeb.DagRunLive do
 
   @impl true
   def render(assigns) do
-    Phoenix.View.render(ExFlowWeb.LiveView, "dag_run.html", assigns)
+    Phoenix.View.render(ExFlowWeb.LiveView, "dag_details.html", assigns)
   end
+
+
 end

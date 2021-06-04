@@ -2,8 +2,6 @@ defmodule ExFlow.DAGManager do
   @moduledoc false
 
   alias ExDag.DAG
-  alias ExDag.DAG.DAGTask
-  alias ExDag.DAG.DAGTaskRun
   require Logger
 
   def task_callback(task, payload) do

@@ -5,7 +5,7 @@ defmodule ExFlow.MixProject do
     [
       app: :ex_flow,
       version: "0.1.0",
-      elixir: "~> 1.7",
+      elixir: "~> 1.11",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:phoenix, :gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -48,8 +48,8 @@ defmodule ExFlow.MixProject do
       {:timex, "~> 3.7"},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
-
-      {:ex_dag, git: "https://github.com/badubizzle/ex_dag.git"}
+      # {:ex_dag, git: "https://github.com/badubizzle/ex_dag.git". :develop}
+      {:ex_dag, path: "/Users/andela/github/ex_dag"}
     ]
   end
 

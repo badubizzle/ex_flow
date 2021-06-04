@@ -17,6 +17,7 @@ defmodule ExFlowWeb.Router do
   scope "/", ExFlowWeb do
     pipe_through :browser
     live "/dags/:dag_id/runs/:run_id", DagRunLive
+    live "/dags/:dag_id", DagLive
     live "/dags", DagLive, :index
     live "/", PageLive, :index
   end

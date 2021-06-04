@@ -1,3 +1,7 @@
+<%= if is_nil(@dag)  do %>
+    <h3>DAG not found</h3>
+<% else %>
+
 
 <h1>All Dags</h1>
 <div  id="live-dags">
@@ -5,8 +9,7 @@
 
   <section class="container">
 
-
-  <%= Phoenix.HTML.Link.link to: "/dags/#{dag.id}" do %>
+  <%= live_patch to: Routes.live_path(@socket, ExFlowWeb.DagLive, dag.id) do %>
       <h1><%= dag.id %></h1>
     <% end %>
 
@@ -36,3 +39,7 @@
 </div>
 
 <% end %>
+
+
+
+<%end %>

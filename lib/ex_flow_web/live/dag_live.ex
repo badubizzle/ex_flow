@@ -1,81 +1,3 @@
-defmodule TaskRunComponent do
-  @moduledoc false
-  use Phoenix.LiveComponent
-
-  def render(assigns) do
-    t = assigns[:task]
-
-    ~L"""
-    <%= cond do %>
-    <% t.status == :completed  -> %>
-      <span class="task-run task-completed"><%= t.id %></span>
-    <% t.status == :running  -> %>
-      <span class="task-run task-running"><%= t.id %></span>
-    <% true -> %>
-    <span class="task-run"><%= t.id %></span>
-    <% end %>
-    """
-  end
-end
-
-defmodule DAGRunComponent do
-  @moduledoc false
-  use Phoenix.LiveComponent
-  alias ExFlowWeb.Router.Helpers, as: Routes
-
-  def render(assigns) do
-    run = assigns[:run]
-    dag = assigns[:dag]
-
-    ~L"""
-    <tr class="">
-      <%= for {_k, val} <- run[:cols] do %>
-        <td><%= val %></td>
-      <% end %>
-
-      <td>
-        <div style="display: inline;">
-        <%= for {_k, t} <- run[:tasks] do %>
-        <%= live_component @socket, TaskRunComponent, task: t %>
-        <% end %>
-        </div>
-      </td>
-
-    <%= cond do %>
-    <% Map.get(run, :completed) == :false  and  Map.get(run, :running) == :false -> %>
-    <td>
-    <button
-    id="resume-run-<%= Map.get(run, :run_id) %>"
-    run-id="<%= Map.get(run, :run_id) %>"
-    dag-id="<%= dag.id %>" phx-hook="ResumeDag" style="color: black;"> &#9654; </button>
-    </td>
-    <% Map.get(run, :running) == :true -> %>
-      <td>
-    <button
-    id="stop-run-<%= Map.get(run, :run_id) %>"
-    run-id="<%= run[:run_id] %>"
-    dag-id="<%= dag.id %>" phx-hook="StopDag" style="color: black;">&#9612;&#9612;</button>
-    </td>
-    <% true  -> %>
-    <% end %>
-    <td>
-    <%= live_patch to: Routes.live_path(@socket, ExFlowWeb.DagRunLive, dag.id, run[:run_id]) do %>
-      <div class="column">
-        Details
-      </div>
-    <% end %>
-
-    <%= if Map.get(run, :completed) == true  and  Map.get(run, :running) == false  do %>
-    <div class="column">
-      <a href="#" id="delete-dag-run-<%= run[:run_id] %>" dag-id="<%= dag.id %>" run-id="<%= run[:run_id] %>" phx-hook="DeleteDagRun">Delete</a>
-    <% end %>
-    </div>
-    </td>
-    </tr>
-    """
-  end
-end
-
 defmodule ExFlowWeb.DagLive do
   @moduledoc false
   use ExFlowWeb, :live_view
@@ -87,13 +9,37 @@ defmodule ExFlowWeb.DagLive do
 
   require Logger
 
+
   @impl true
-  def mount(_params, _session, socket) do
-    dags = ExDag.Store.get_dags()
-    ExFlow.Notifications.subscribe()
-    cols = get_cols()
+  def mount(params, _session, socket) do
     Process.send_after(self(), {:dag_status, nil}, 5_000)
-    {:ok, assign(socket, query: "", dags: dags, rows: build_rows(dags), cols: cols)}
+    socket = build_assigns(socket)
+    {:ok, assign(socket, dag_id: Map.get(params, "dag_id"))}
+  end
+
+  def mount(%{"dag_id"=>dag_id}=params, _session, socket) do
+    Process.send_after(self(), {:dag_status, nil}, 5_000)
+    socket =
+      socket
+      |> assign(dag_id: dag_id)
+      |> build_assigns()
+    {:ok, assign(socket, dag_id: Map.get(params, "dag_id"))}
+  end
+
+  @impl true
+  def handle_params(_params, _uri, socket) do
+    socket = build_assigns(socket)
+    {:noreply, socket}
+  end
+
+  def handle_params(_params, _uri, socket) do
+    socket = %{
+      socket
+      | assigns: Map.delete(socket.assigns, :dag_id),
+        changed: Map.put_new(socket.changed, :dag_id, true)
+    }
+    socket = build_assigns(socket) |> IO.inspect()
+    {:noreply, socket}
   end
 
   @impl true
@@ -101,10 +47,8 @@ defmodule ExFlowWeb.DagLive do
     dags = socket.assigns.dags
     dag = Map.get(dags, dag_id)
     ExFlow.DAGManager.run_dag(dag)
-    dags = ExDag.Store.get_dags()
-    rows = build_rows(dags)
-    cols = get_cols()
-    {:noreply, assign(socket, dags: dags, rows: rows, cols: cols)}
+    socket = build_assigns(socket)
+    {:noreply, socket}
   end
 
   def handle_event("resume_dag", %{"run_id" => run_id, "dag_id" => dag_id}, socket) do
@@ -113,10 +57,8 @@ defmodule ExFlowWeb.DagLive do
     runs = ExDag.Store.get_dag_runs(dag)
     run = Map.get(runs, run_id)
     ExFlow.DAGManager.resume_dag(run)
-    dags = ExDag.Store.get_dags()
-    rows = build_rows(dags)
-    cols = get_cols()
-    {:noreply, assign(socket, rows: rows, cols: cols, dags: dags)}
+    socket = build_assigns(socket)
+    {:noreply, socket}
   end
 
   def handle_event("stop_dag", %{"run_id" => run_id, "dag_id" => dag_id}, socket) do
@@ -125,30 +67,30 @@ defmodule ExFlowWeb.DagLive do
     runs = ExDag.Store.get_dag_runs(dag)
     run = Map.get(runs, run_id)
     ExFlow.DAGManager.stop_dag(run)
-    dags = ExDag.Store.get_dags()
-    rows = build_rows(dags)
-    cols = get_cols()
-    {:noreply, assign(socket, rows: rows, cols: cols, dags: dags)}
+    socket = build_assigns(socket)
+    {:noreply, socket}
   end
 
   def handle_event("delete-dag", %{"dag_id" => dag_id}, socket) do
     dags = socket.assigns.dags
     dag = Map.get(dags, dag_id)
     ExFlow.DAGManager.delete_dag(dag)
-    dags = ExDag.Store.get_dags()
-    rows = build_rows(dags)
-    cols = get_cols()
-    {:noreply, assign(socket, rows: rows, cols: cols, dags: dags)}
+    socket = build_assigns(socket)
+    {:noreply, socket}
   end
 
   @impl true
   def handle_info({:dag_status, _dag}, socket) do
     Logger.info("Updating status")
-    dags = ExDag.Store.get_dags()
-    rows = build_rows(dags)
-    cols = get_cols()
-    push_event(socket, "update_dags", %{dags: [], rows: rows, cols: cols})
-    {:noreply, assign(socket, dags: dags, rows: rows, cols: cols)}
+    socket = build_assigns(socket)
+
+    push_event(socket, "update_dags", %{
+      dags: [],
+      rows: socket.assigns.rows,
+      cols: socket.assigns.cols
+    })
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -165,17 +107,6 @@ defmodule ExFlowWeb.DagLive do
       "DAD ID",
       "RUN ID",
       "Status"
-      # "Total Tasks",
-      # "Running Tasks",
-      # "Pending Tasks",
-      # "Completed Tasks",
-      # "Start Date"
-      # "Started At",
-      # "Ended At",
-      # "Took",
-      # "Runs",
-      # "Result",
-      # "Payload"
     ]
   end
 
@@ -292,5 +223,27 @@ defmodule ExFlowWeb.DagLive do
 
   def format_time(d) do
     "#{d.hour}:#{d.minute}:#{d.second}"
+  end
+
+  defp build_assigns(%{assigns: %{dag_id: dag_id}} = socket) when is_binary(dag_id) do
+    {dags, rows} =
+      case ExDag.Store.get_dag(dag_id) do
+        {:ok, %ExDag.DAG{} = dag} ->
+          rows = build_rows([{dag.dag_id, dag}])
+          {[dag], rows}
+
+        _ ->
+          {[], []}
+      end
+
+    cols = get_cols()
+    assign(socket, dag_id: dag_id, dags: dags, rows: rows, cols: cols)
+  end
+
+  defp build_assigns(%{assigns: _} = socket) do
+    dags = ExDag.Store.get_dags()
+    cols = get_cols()
+    rows = build_rows(dags)
+    assign(socket, dags: dags, rows: rows, cols: cols)
   end
 end
